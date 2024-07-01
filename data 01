@@ -1,0 +1,73 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+# Base URL
+base_url = "https://results.eci.gov.in/PcResultGenJune2024/Constituencywise"
+
+# List of state and union territory codes
+state_codes = [
+    "S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09", "S10",
+    "S11", "S12", "S13", "S14", "S15", "S16", "S17", "S18", "S19", "S20",
+    "S21", "S22", "S23", "S24", "S25", "S26", "S27", "S28", "S29", "S30",
+    "S31", "S32", "S33", "S34", "S35", "S36"
+]
+
+union_territory_codes = [
+    "U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08", "U09"
+]
+
+# Initialize a list to hold all the scraped data
+all_data = []
+
+# Function to get results for a specific code and constituency
+def get_election_results(code, constituency):
+    # Construct the URL
+    url = f"{base_url}{code}{constituency}.htm"
+    
+    # Send an HTTP request
+    response = requests.get(url)
+    
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the HTML content
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Extract specific data (modify this part based on the actual HTML structure)
+        rows = soup.find_all('tr')
+        for row in rows:
+            columns = row.find_all('td')
+            column_data = [col.text.strip() for col in columns]
+            if column_data:
+                # Append the constituency and code for better traceability
+                column_data.insert(0, constituency)
+                column_data.insert(0, code)
+                all_data.append(column_data)
+    else:
+        print(f"Failed to retrieve data for code {code} and constituency {constituency}. HTTP Status Code: {response.status_code}")
+
+# Loop through all states and constituencies
+for state_code in state_codes:
+    for constituency_number in range(1, 86):  # Assuming a maximum of 85 constituencies per state
+        constituency_code = f"{constituency_number:02d}"  # Format as two-digit number
+        get_election_results(state_code, constituency_code)
+
+# Loop through all union territories and constituencies
+for ut_code in union_territory_codes:
+    for constituency_number in range(1, 86):  # Assuming a maximum of 85 constituencies per union territory
+        constituency_code = f"{constituency_number:02d}"  # Format as two-digit number
+        get_election_results(ut_code, constituency_code)
+
+# Specify the path to save the CSV file
+file_path = os.path.join(os.path.expanduser("~"), "data", "election_results.csv")
+
+# Write the data to a CSV file
+with open(file_path, 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    # Write the header row (customize based on the actual data structure)
+    writer.writerow(['Code', 'Constituency', 'Column1', 'Column2', 'Column3', 'Column4', 'Column5', 'Column6', 'Column7'])
+    # Write all data
+    writer.writerows(all_data)
+
+print(f"Data has been written to {file_path}")
